@@ -80,7 +80,9 @@ KEYS = {
 CONFIGURABLES = {'g:filepirate_max_results': (int, 10),
 		'g:filepirate_is_modal': (int, 0),
 		'g:filepirate_map_extra_normal': (dict, {}),
-		'g:filepirate_map_extra_insert': (dict, {})}
+		'g:filepirate_map_extra_insert': (dict, {}),
+		'g:filepirate_accept_to': (str, 'e')
+	}
 
 # Shown while reloading directory information
 SPINNER = r'/-\|'
@@ -147,7 +149,7 @@ class FilePirateThread(threading.Thread):
 				self.event.wait()
 			else:
 				self.lock.release()
-			
+
 			self.lock.acquire()
 			if self.search_terms:
 				term = self.search_terms[-1]
@@ -164,7 +166,7 @@ class FilePirateThread(threading.Thread):
 			else:
 				self.event.clear()
 				self.lock.release()
-	
+
 	def do_search_fp(self, term):
 		try:
 			pirate = self.pirates.get(os.getcwd())
@@ -194,7 +196,7 @@ class FilePirateThread(threading.Thread):
 		self.search_terms.append(term)
 		self.event.set()
 		self.lock.release()
-	
+
 	def rescan(self):
 		self.rescan_requested = True
 
@@ -211,11 +213,11 @@ class VimAsync(object):
 		self.running = False
 		self.clear()
 		self.saved_updatetime = int(vim.eval('&updatetime'))
-	
+
 	def clear(self):
 		self.callback = None
 		self.callback_args = None
-	
+
 	def start(self, callback, *args):
 		self.callback = callback
 		self.callback_args = args
@@ -227,7 +229,7 @@ class VimAsync(object):
 			# The magic key we remap for KeyHold timer updates
 			vim.command('noremap <silent> <buffer> <C-A> :python ""<CR>')
 			self.running = True
-	
+
 	def stop(self):
 		vim.command('set updatetime=%d' % (self.saved_updatetime))
 		vim.command("au! CursorHold *")
@@ -253,7 +255,7 @@ class VimFilePirate(object):
 		self.previous_window_number = None
 		self.search_start_time = 0
 		self.reset()
-	
+
 	def reset(self):
 		self.term = '' # search term
 		self.spinner_character = ' '
@@ -289,7 +291,7 @@ class VimFilePirate(object):
 				self.buf.append('')
 		self.lock_buffer()
 		vim.current.window.cursor = (2, 0)
-	
+
 	def config_load(self):
 		self.config = {}
 		for key, keyinfo in CONFIGURABLES.items():
@@ -300,6 +302,8 @@ class VimFilePirate(object):
 				try:
 					if key_class is int:
 						value = int(value)
+					elif key_class is str:
+						value = str(value)
 					elif key_class is dict:
 						# Nothing special to do
 						pass
@@ -323,7 +327,7 @@ class VimFilePirate(object):
 		for key in KEYS['insert']:
 			ascii_val = ord(key)
 			vim.command('nunmap <silent> <buffer> <Char-%d>' % (ascii_val))
-	
+
 	def _maybe_get_custom_key_mapping(self, cmd, keyname):
 		key_customisation_name = 'g:%s%s' % (cmd, CUSTOM_KEY_MODE_SUFFIX[self.mode])
 		if vim.eval('exists("%s")' % (key_customisation_name)) != '0':
@@ -369,7 +373,7 @@ class VimFilePirate(object):
 			assert self.mode == MODE_NOMODE
 			self._buffer_register_keys_standard()
 			self._buffer_register_keys_special(KEYS['normal'])
-	
+
 	def buffer_unregister_keys(self):
 		if self.mode == MODE_INSERT:
 			self._buffer_unregister_keys_standard()
@@ -383,7 +387,7 @@ class VimFilePirate(object):
 			assert self.mode == MODE_NOMODE
 			self._buffer_unregister_keys_standard()
 			self._buffer_unregister_keys_special(KEYS['normal'])
-	
+
 	def search_poll(self):
 		if self.searching is True:
 			if self.fp and self.fp.results is not None:
@@ -394,13 +398,13 @@ class VimFilePirate(object):
 				self.show_results(self.fp.results)
 			else:
 				self.advance_spinner()
-	
+
 	def advance_spinner(self):
 		if time.time() - self.search_start_time > SPINNER_DELAY:
 			self.spinner_character = SPINNER[self.spinner_position]
 			self.spinner_position = (self.spinner_position + 1) % len(SPINNER)
 			self.draw_search_line()
-	
+
 	def draw_search_line(self):
 		self.unlock_buffer()
 		self.buf[0] = self.spinner_character + PROMPT + self.term
@@ -408,7 +412,7 @@ class VimFilePirate(object):
 
 	def lock_buffer(self):
 		vim.command('setlocal nomodifiable')
-	
+
 	def unlock_buffer(self):
 		vim.command('setlocal modifiable')
 
@@ -426,7 +430,7 @@ class VimFilePirate(object):
 			self.stored_vim_globals[opt] = bool(vim.eval('&' + opt))
 			setter = opt if GLOBAL_OPTIONS[opt] else 'no' + opt
 			vim.command('set ' + setter)
-	
+
 	def reset_global_options(self):
 		" Restore settings saved in set_global_options() "
 		for opt in self.stored_vim_globals:
@@ -441,7 +445,7 @@ class VimFilePirate(object):
 		# Set up the buffer and bend vim to our will
 		self.buffer_create()
 		self.set_global_options()
-	
+
 	def filepirate_close(self):
 		" Close the window and shut down "
 		self.async.stop()
@@ -453,7 +457,7 @@ class VimFilePirate(object):
 	def filepirate_key(self, ascii):
 		" User pressed a key in the File Pirate window. "
 		self.search(self.term + chr(ascii))
-	
+
 	def search(self, term):
 		" Start a File Pirate search for 'term' "
 		if self.fp is None:
@@ -467,7 +471,7 @@ class VimFilePirate(object):
 		self.async.start(self.search_poll)
 		self.fp.search(self.term)
 		self.searching = True
-	
+
 	def filepirate_accept(self, line_number = None):
 		" Close the File Pirate window and switch to the selected file "
 		if line_number is None:
@@ -479,38 +483,38 @@ class VimFilePirate(object):
 		filename = filename.replace(' ', r'\ ')
 		self.filepirate_close()
 
-		vim.command('e %s' % (filename))
+		vim.command('%s %s' % (self.config['g:filepirate_accept_to'], filename))
 
 	def filepirate_cancel(self):
 		" Close the File Pirate window without selecting a file "
 		self.filepirate_close()
-	
+
 	def filepirate_up(self):
 		" Move cursor up "
 		y, x = vim.current.window.cursor
 		if y > 1:
 			y -= 1
 			vim.current.window.cursor = (y, x)
-	
+
 	def filepirate_down(self):
 		" Move cursor down "
 		y, x = vim.current.window.cursor
 		if y < self.config['g:filepirate_max_results']:
 			y += 1
 			vim.current.window.cursor = (y, x)
-	
+
 	def filepirate_bs(self):
 		" Backspace "
 		if len(self.term) > 0:
 			self.search(self.term[:-1])
-	
+
 	def filepirate_rescan(self):
 		" Rescan the current directory "
 		print "rescan"
 		self.fp.rescan()
 		if self.term:
 			self.search(self.term)
-	
+
 	def filepirate_enter_insert_mode(self):
 		pass
 
@@ -518,7 +522,7 @@ class VimFilePirate(object):
 		self.buffer_unregister_keys()
 		self.mode = MODE_NORMAL
 		self.buffer_register_keys()
-	
+
 	def filepirate_enter_insert_mode(self):
 		self.buffer_unregister_keys()
 		self.mode = MODE_INSERT
