@@ -16,7 +16,7 @@
 
 #include "cfilepirate.h"
 
-/* Memory allocation attempts to increase by a power of 2 each time, 
+/* Memory allocation attempts to increase by a power of 2 each time,
  * stopping at MEM_MAX, which is 64 megabytes by default.
  */
 #define MEM_MIN (1 * 1024 * 1024)
@@ -443,7 +443,7 @@ bool fp_get_candidates(struct filepirate *fp, char *buffer, int buffer_ptr, stru
 		filename_len = *(unsigned int *)files;
 		files += sizeof(unsigned int);
 		if (filename_len == 0) {
-			// End of this directory 
+			// End of this directory
 			files += 1;
 			new_directory = true;
 		} else {
@@ -504,4 +504,3 @@ void fp_filter(struct filepirate *fp, char **positive, char **negative)
 	fp->positive_filter = positive;
 	fp->negative_filter = negative;
 }
-

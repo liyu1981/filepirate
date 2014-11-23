@@ -28,7 +28,8 @@ PROTOTYPES = {'fp_init': (ctypes.c_void_p, [ctypes.c_char_p]),
 		'fp_deinit': (ctypes.c_bool, [ctypes.c_void_p]),
 		'fp_candidate_list_create': (ctypes.POINTER(CandidateList), [ctypes.c_int]),
 		'fp_candidate_list_destroy': (None, [ctypes.c_void_p]),
-		'fp_get_candidates': (ctypes.c_bool, [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_void_p])
+		'fp_get_candidates': (ctypes.c_bool, [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_void_p]),
+		'fp_filter': (None, [ctypes.c_char_p, ctypes.c_char_p])
 }
 
 class Error(Exception):
@@ -55,16 +56,16 @@ class FilePirate(object):
 
 		self.max_candidates = max_candidates
 		self.create()
-	
+
 	def __del__(self):
 		if self.native:
 			self.native.fp_candidate_list_destroy(self.candidates)
 			self.native.fp_deinit(self.handle)
-	
+
 	def rescan(self):
 		self.__del__()
 		self.create()
-	
+
 	def create(self):
 		self.handle = self.native.fp_init(self.root)
 		if bool(self.handle) == False: # ctypes-speak for handle == NULL
