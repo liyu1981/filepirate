@@ -25,11 +25,12 @@ class CandidateList(ctypes.Structure):
 		('max_candidates', ctypes.c_int)]
 
 PROTOTYPES = {'fp_init': (ctypes.c_void_p, [ctypes.c_char_p]),
+		'fp_init_dir': (ctypes.c_bool, [ctypes.c_void_p, ctypes.c_char_p]),
 		'fp_deinit': (ctypes.c_bool, [ctypes.c_void_p]),
 		'fp_candidate_list_create': (ctypes.POINTER(CandidateList), [ctypes.c_int]),
 		'fp_candidate_list_destroy': (None, [ctypes.c_void_p]),
 		'fp_get_candidates': (ctypes.c_bool, [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_void_p]),
-		'fp_filter': (None, [ctypes.c_char_p, ctypes.c_char_p])
+		'fp_add_ignore_rule': (None, [ctypes.c_void_p, ctypes.c_char_p])
 }
 
 class Error(Exception):
@@ -74,6 +75,26 @@ class FilePirate(object):
 		self.candidates = self.native.fp_candidate_list_create(self.max_candidates)
 		if self.candidates == None:
 			raise Error("fp_candidate_list_create")
+
+		# find all gitignore rules
+		rule_dict = {};
+		for subdir, dirs, files in os.walk(self.root):
+			relative_dir = os.path.relpath(subdir, self.root)
+			for file in files:
+				if file == '.gitignore':
+					with open(os.path.join(subdir, file)) as f:
+						for rule in [ rule.strip() for rule in f.readlines() if not rule.startswith('#') ]:
+							if not rule == '':
+								rule_dict[relative_dir + os.sep + rule] = True
+		rule_array = rule_dict.keys()
+		# and add them to the native filters
+		for rule in rule_array:
+			self.native.fp_add_ignore_rule(self.handle, rule)
+
+		# now init dir
+		h = self.native.fp_init_dir(self.handle, self.root)
+		if bool(h) == False:
+			raise Error("fp_init_dir")
 
 	def get_candidates(self, search_term):
 		result = self.native.fp_get_candidates(self.handle, search_term, len(search_term), self.candidates)

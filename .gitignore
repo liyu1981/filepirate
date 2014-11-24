@@ -1,0 +1,4 @@
+*.o
+*.so
+*.pyc
+plugin/cfilepirate_test

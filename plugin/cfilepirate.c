@@ -55,7 +55,9 @@ struct filepirate {
 	uint8_t *files_end;
 	struct memory_pool main_pool;
 	char **positive_filter;
+	int positive_filter_capacity;
 	char **negative_filter;
+	int negative_filter_capacity;
 };
 
 /* Memory pool functions */
@@ -147,17 +149,18 @@ static inline void write_uint (struct filepirate *fp, uintptr_t index, unsigned 
 
 static inline bool passes_filter(struct filepirate *fp, char *name)
 {
-	if (fp->positive_filter) {
-		for (char **filter = fp->positive_filter; *filter; filter++) {
-			if (fnmatch(*filter, name, 0) == 0) {
-				return true;
-			}
-		}
-		return false;
-	}
+	//if (fp->positive_filter) {
+	//	for (char **filter = fp->positive_filter; *filter; filter++) {
+	//		if (fnmatch(*filter, name, 0) == 0) {
+	//			return true;
+	//		}
+	//	}
+	//	return false;
+	//}
 	if (fp->negative_filter) {
 		for (char **filter = fp->negative_filter; *filter; filter++) {
-			if (fnmatch(*filter, name, 0) == 0) {
+			if (strstr(name, *filter) != NULL || fnmatch(*filter, name, 0) == 0) {
+        //printf("fnmatch %s, %s, =yes\n", *filter, name);
 				return false;
 			}
 		}
@@ -194,7 +197,8 @@ static uintptr_t fp_init_dir_recurse(struct filepirate *fp)
 		} else if (node->fts_info & FTS_DP) {
 			//printf("post-order directory\n");
 			dir_written = false;
-		} else if ((node->fts_info & FTS_F) && passes_filter(fp, node->fts_name)) {
+		//} else if ((node->fts_info & FTS_F) && passes_filter(fp, node->fts_name)) {
+		} else if ((node->fts_info & FTS_F) && passes_filter(fp, node->fts_accpath)) {
 			if (dir_written == false) {
 				FTSENT *parent = node->fts_parent;
 				if (dirent_start) {
@@ -238,7 +242,7 @@ static uintptr_t fp_init_dir_recurse(struct filepirate *fp)
 	return first;
 }
 
-static bool fp_init_dir(struct filepirate *fp, char *dirname)
+bool fp_init_dir(struct filepirate *fp, char *dirname)
 {
 	int cwd;
 	uintptr_t files_index;
@@ -473,16 +477,21 @@ struct filepirate *fp_init(char *dirname)
 	if (fp == NULL)
 		return NULL;
 
-	fp->positive_filter = fp->negative_filter = NULL;
+	// init both positive_filter & negative_filter to be array of size 8
+	fp->positive_filter = (char**)calloc(8, sizeof(char*));
+	fp->positive_filter_capacity = 8;
+	fp->negative_filter = (char**)calloc(8, sizeof(char*));
+	fp->negative_filter_capacity = 8;
+
 	if (pool_init(&(fp->main_pool)) == false) {
 		free(fp);
 		return NULL;
 	}
 
-	if (fp_init_dir(fp, dirname) == false) {
-		fp_deinit(fp);
-		return NULL;
-	}
+	//if (fp_init_dir(fp, dirname) == false) {
+	//	fp_deinit(fp);
+	//	return NULL;
+	//}
 
 	return fp;
 }
@@ -501,6 +510,24 @@ bool fp_deinit(struct filepirate *fp)
 
 void fp_filter(struct filepirate *fp, char **positive, char **negative)
 {
-	fp->positive_filter = positive;
-	fp->negative_filter = negative;
+//	fp->positive_filter = positive;
+//	fp->negative_filter = negative;
+}
+
+void fp_add_ignore_rule(struct filepirate *fp, char* rule)
+{
+	int i = 0;
+	for (char **filter = fp->negative_filter; *filter; filter++) {
+		i += 1;
+	}
+	if (i + 1 >= fp->negative_filter_capacity) {
+		// expand the array to 2x size
+		fp->negative_filter_capacity = fp->negative_filter_capacity * 2;
+		char** newarray = (char**)calloc(fp->negative_filter_capacity, sizeof(char*));
+		memcpy(newarray, fp->negative_filter, sizeof(char*) * i);
+		free(fp->negative_filter);
+		fp->negative_filter = newarray;
+	}
+	fp->negative_filter[i] = rule;
+  //printf("added: %d, %s\n", i, fp->negative_filter[i]);
 }

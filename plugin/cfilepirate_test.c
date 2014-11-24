@@ -131,7 +131,14 @@ int main(int argc, char **argv)
 		term_init();
 	}
 
-	fp_filter(fp, positive_filter, negative_filter);
+	//fp_filter(fp, positive_filter, negative_filter);
+  fp_add_ignore_rule(fp, "bower_components");
+
+	if (fp_init_dir(fp, argv[1]) == false) {
+		fp_deinit(fp);
+    ERROR("init dir failed");
+		return 1;
+	}
 
 	if (argc == 2)
 		filepirate_interactive_test(fp);

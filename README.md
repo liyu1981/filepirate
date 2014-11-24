@@ -3,7 +3,8 @@ About
 
 This is a fork of File Pirate, with my tweaks.
 
-* `let g:filepirate_accept_to=<vim cmd>` to open file with wanted vim command. Default is `e`. Or you can set it to `tabe` when use `gvim` or `MacVim`
+* Scan current dir for all `.gitignore` files, and use those rules for filtering out the files.
+* `let g:filepirate_accept_to=<vim cmd>` to open file with wanted vim command. Default is `e` in term and `tabe` in gui mode. Or you can set it to `vsp` in term.
 
 See original readme below
 =========================

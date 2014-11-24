@@ -3,6 +3,8 @@ struct filepirate;
 struct filepirate *fp_init(char *dirname);
 bool fp_deinit(struct filepirate *fp);
 void fp_filter(struct filepirate *fp, char **positive, char **negative);
+void fp_add_ignore_rule(struct filepirate *fp, char *rule);
+bool fp_init_dir(struct filepirate *fp, char *dirname);
 
 struct candidate {
 	char *dirname;
