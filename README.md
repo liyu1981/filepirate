@@ -6,6 +6,18 @@ This is a fork of File Pirate, with my tweaks.
 * Scan current dir for all `.gitignore` files, and use those rules for filtering out the files.
 * `let g:filepirate_accept_to=<vim cmd>` to open file with wanted vim command. Default is `e` in term and `tabe` in gui mode. Or you can set it to `vsp` in term.
 
+### Note for using with MacVim
+
+Save this [gist](https://gist.github.com/liyu1981/d8b9023855e056e91b65) to `~/mvi.sh`, then
+
+```
+chmod +x ~/mvi.sh
+export PATH=~:$PATH
+mvi.sh /your/file.txt
+```
+
+Do not use this (`open -a MacVim`) solution. It will set `CWD` wrongly (to file's dir, not the current dir.)
+
 See original readme below
 =========================
 
